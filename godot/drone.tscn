@@ -1,0 +1,42 @@
+[gd_scene load_steps=8 format=2]
+
+[ext_resource path="res://hand A.mesh" type="ArrayMesh" id=1]
+[ext_resource path="res://hand B.mesh" type="ArrayMesh" id=2]
+[ext_resource path="res://arm B.mesh" type="ArrayMesh" id=3]
+[ext_resource path="res://drone.mesh" type="ArrayMesh" id=4]
+[ext_resource path="res://arm A.mesh" type="ArrayMesh" id=5]
+[ext_resource path="res://drone.gd" type="Script" id=6]
+
+[sub_resource type="CapsuleShape" id=1]
+
+[node name="drone" type="KinematicBody"]
+script = ExtResource( 6 )
+
+[node name="body" type="MeshInstance" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.700766, -2.38419e-07 )
+mesh = ExtResource( 4 )
+material/0 = null
+
+[node name="armA" type="MeshInstance" parent="body"]
+transform = Transform( 1, 0, 0, 0, 0.896834, -0.442367, 0, 0.442367, 0.896834, 0.0384083, -0.687183, 0.368451 )
+mesh = ExtResource( 5 )
+material/0 = null
+
+[node name="handA" type="MeshInstance" parent="body/armA"]
+transform = Transform( 1, 0, 0, 0, 0.726683, 0.686974, 0, -0.686974, 0.726683, 0, -1.78436, 0.887624 )
+mesh = ExtResource( 1 )
+material/0 = null
+
+[node name="armB" type="MeshInstance" parent="body"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0384083, -0.698472, -0.398129 )
+mesh = ExtResource( 3 )
+material/0 = null
+
+[node name="handB" type="MeshInstance" parent="body/armB"]
+transform = Transform( 1, 0, 0, 0, 0.844562, -0.535458, 0, 0.535458, 0.844562, 0.00025177, -1.80068, -0.794452 )
+mesh = ExtResource( 2 )
+material/0 = null
+
+[node name="CollisionShape" type="CollisionShape" parent="."]
+transform = Transform( -9.66022e-08, 0, 2.21, 0, 1.911, 0, -2.47, 0, -1.07967e-07, 0, 1, 0 )
+shape = SubResource( 1 )

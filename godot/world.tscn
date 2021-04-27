@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://drone.tscn" type="PackedScene" id=1]
+
+[node name="world" type="Spatial"]
+
+[node name="drone" parent="." instance=ExtResource( 1 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2.66317, -0.626258, -4.51975 )
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 0.750746, 0, 0.660592, 0, 1, 0, -0.660592, 0, 0.750746, 31.5504, 4.9548, 8.31769 )
+
+[node name="DirectionalLight" type="DirectionalLight" parent="."]
+transform = Transform( 1, 0, 0, 0, -0.00429359, 0.999991, 0, -0.999991, -0.00429359, 0, 10.8096, 0 )
