@@ -8,32 +8,18 @@
         </visual>
     </link>
  
-    <link name="arm A"/>
-    <link name="arm B"/>
-    <link name="hand A"/>
-    <link name="hand B"/>
+    <link name="armA"/>
+    <link name="armB"/>
 
     <joint name="jointBodyArmA" type="continuous">
         <parent link="drone"/>
-        <child link="arm A"/>
+        <child link="armA"/>
         <origin xyz="0 -0.34 -0.44" rpy="0 0 0"/>
    </joint>
 
     <joint name="jointBodyArmB" type="continuous">
         <parent link="drone"/>
-        <child link="arm B"/>
+        <child link="armB"/>
         <origin xyz="0 0.34 -0.49" rpy="0 0 0"/>
-    </joint>
-
-    <joint name="jointArmHandA" type="continuous">
-        <parent link="arm A"/>
-        <child link="hand A"/>
-        <origin xyz="0 -1.21 -2.21" rpy="0 0 0"/>
-    </joint>
-
-    <joint name="jointArmHandB" type="continuous">
-        <parent link="arm B"/>
-        <child link="hand B"/>
-        <origin xyz="0 1.13 -2.28" rpy="0 0 0"/>
     </joint>
 </robot>
