@@ -26,7 +26,7 @@
             <inertia ixx="0.00457" ixy="1E-06" ixz="2E-06" iyy="0.004831" iyz="0.000448" izz="0.001409"/>
         </inertial>
         <visual>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <origin xyz="0 0.005 0.011" rpy="0 0 0"/>
             <geometry>
                 <mesh filename="airobot_grip/armA.obj"/>
             </geometry>
@@ -39,7 +39,7 @@
             <inertia ixx="0.00457" ixy="1E-06" ixz="2E-06" iyy="0.004831" iyz="0.000448" izz="0.001409"/>
         </inertial>
         <visual>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <origin xyz="0 0.005 -0.011" rpy="0 0 0"/>
             <geometry>
                 <mesh filename="airobot_grip/armB.obj"/>
             </geometry>
@@ -49,12 +49,12 @@
     <joint name="jointBodyArmA" type="continuous">
         <parent link="drone"/>
         <child link="armA"/>
-        <origin xyz="0 -0.34 -0.44" rpy="0 0 0"/>
+        <origin xyz="0 0.005 0.011" rpy="0 0 0"/>
    </joint>
 
     <joint name="jointBodyArmB" type="continuous">
         <parent link="drone"/>
         <child link="armB"/>
-        <origin xyz="0 0.34 -0.49" rpy="0 0 0"/>
+        <origin xyz="0 0.005 -0.011" rpy="0 0 0"/>
     </joint>
 </robot>
