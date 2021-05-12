@@ -8,13 +8,13 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
-                <mesh filename="airobot.dae"/>
+                <mesh filename="airobot_grip/drone.obj"/>
             </geometry>
         </visual>
         <collision>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
-                <mesh filename="airobot.dae"/>
+                <mesh filename="airobot_grip/drone.obj"/>
             </geometry>
         </collision>
     </link>
@@ -22,7 +22,7 @@
     <link name="armA">
         <inertial>
             <origin xyz="-0.000648 -0.000166 0.084487" rpy="0 0 0"/>
-            <mass value="0.25" />
+            <mass value="0.25"/>
             <inertia ixx="0.00457" ixy="1E-06" ixz="2E-06" iyy="0.004831" iyz="0.000448" izz="0.001409"/>
         </inertial>
         <visual>
