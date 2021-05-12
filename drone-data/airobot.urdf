@@ -57,4 +57,9 @@
         <child link="armB"/>
         <origin xyz="0 0.005 -0.011" rpy="0 0 0"/>
     </joint>
+    <klampt world_frame="world" default_acc_max="1.0">
+    <noselfcollision group1="drone" group2="armA armB"/>
+
+    <mount link="drone" file = "airobot_grip.rob" transform = "1 0 0  0 1 0  0 0 1  0 0 0" prefix="gripper"/>
+  </klampt>
 </robot>
