@@ -1,0 +1,14 @@
+links   Link_0 Link_1 Link_2
+parents	-1 0 0
+
+axis	0 0 1	0 -1 0	0 0 1
+#axis	0 0 1	0 -1 0	0 -1 0
+Tparent	1 0 0	0 1 0	0 0 1	0 0 0 \
+1 0 0	0 1 0	0 0 1	0 0 0 \
+1 0 0	0 1 0	0 0 1	0 0 0 \
+
+geometry	"airobot_grip/drone.obj" "airobot_grip/armA.obj" "airobot_grip/armB.obj"
+
+mass	0.3 0.03 0.03
+
+automass
