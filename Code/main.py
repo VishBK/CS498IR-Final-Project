@@ -104,8 +104,6 @@ def gen_objs(world, objs):
     # arrange_objects(world, obj_ids, bmin, bmax)
 
 
-
-
 # load the world and robot models
 fn = "../drone-data/world.xml"
 world = WorldModel()
@@ -125,7 +123,9 @@ state = 'to_object'
 
 # set drone home
 home_coord = [2,2,2]
-drone.setConfig([home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0, 0, 0, 0])
+print(drone.getConfig())
+#TODO figure out config numbers: [drone_x, drone_y, drone_z, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?]
+drone.setConfig([home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
 obj_1 = world.rigidObject(0)
 obj_tform = obj_1.getTransform()
@@ -200,7 +200,7 @@ while vis.shown():
     
         obj_1.setTransform(obj_tform[0],[obj_x, obj_y, obj_z])
 
-    drone.setConfig([cur_x, cur_y, cur_z, 2.0, 0.0, 0.0, 0, 0, 0, 0, 0])
+    drone.setConfig([cur_x, cur_y, cur_z, 2.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     time.sleep(0.01)    #loop is called ~100x times per second
 vis.kill()              #safe cleanup

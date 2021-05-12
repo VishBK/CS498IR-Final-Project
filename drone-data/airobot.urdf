@@ -19,7 +19,7 @@
         </collision>
     </link>
  
-    <link name="armA">
+    <!-- <link name="armA">
         <inertial>
             <origin xyz="-0.000648 -0.000166 0.084487" rpy="0 0 0"/>
             <mass value="0.25"/>
@@ -56,10 +56,12 @@
         <parent link="drone"/>
         <child link="armB"/>
         <origin xyz="0 0.005 -0.011" rpy="0 0 0"/>
-    </joint>
-    <klampt world_frame="world" default_acc_max="1.0">
-    <noselfcollision group1="drone" group2="armA armB"/>
+    </joint> -->
 
-    <mount link="drone" file = "airobot_grip.rob" transform = "1 0 0  0 1 0  0 0 1  0 0 0" prefix="gripper"/>
+    <klampt world_frame="world" default_acc_max="1.0">
+    <!-- <noselfcollision group1="drone" group2="armA armB"/> -->
+    <noselfcollision group1="drone" group2="gripper:Link_0" />
+
+    <mount link="drone" file = "../data/robots/robotiq_85.rob" transform = "1 0 0  0 1 0  0 0 -1  0 0 -0.025" prefix="gripper"/>
   </klampt>
 </robot>
