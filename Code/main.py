@@ -126,7 +126,4 @@ closeup_viewport = {'up': {'z': 0, 'y': 1, 'x': 0}, 'target': {'z': 0, 'y': 0, '
 vis.add("world",world)
 #vis.add("COM",m.getCom(),color=(1,0,0,1),size=0.01)
 vis.show()
-<<<<<<< HEAD
 vis.loop()
-=======
->>>>>>> f9f675443dd41573312012e0dd3bd7b69260ca89
