@@ -104,26 +104,91 @@ def gen_objs(world, objs):
     # arrange_objects(world, obj_ids, bmin, bmax)
 
 
+
+
+# load the world and robot models
 fn = "../drone-data/world.xml"
 world = WorldModel()
 res = world.readFile(fn)
-
-#print(world.numRobots())
 
 if not res:
     print("Unable to read file",fn)
     exit(0)
 
+# generate a random world
 drone = world.robot(0)
+print('# links:', drone.numLinks())
 objs = {"object1": "../data/objects/cube.off"}
 gen_objs(world, objs)
 
+state = 'to_object'
+
+# set drone home
+home_coord = [2,2,1]
+drone.setConfig([home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0, 0, 0, 0])
+
+obj_1 = world.rigidObject(0)
+obj_tform = obj_1.getTransform()
+# world.rigidObject(0).setTransform(obj_tform[0], [0, 0, 0])
+
+obj_com = obj_1.getMass().getCom()
+
+obj_x, obj_y, obj_z = se3.apply(obj_tform, obj_com)
+cur_x, cur_y, cur_z = home_coord
+
+# set up window
+
+#vis.createWindow()
+#add a "world" item to the scene manager
+vis.add("world", world)
+#show qrand as a ghost configuration in transparent red
+#vis.add("qrand",qrand,color=(1,0,0,0.5))
+#show a Trajectory between q0 and qrand
+#vis.add("path_to_qrand",RobotTrajectory(r,[0,1],[q0,qrand]))
+
+#To control interaction / animation, launch the loop via one of the following:
+# drone flies to object
+tol = 0.01
+
+vis.show()              #open the window
+t0 = time.time()
+while vis.shown():
+    if state == 'to_object':
+        if cur_x < obj_x:
+            cur_x += 0.01
+        elif cur_x > obj_x:
+            cur_x -= 0.01
+        if cur_y < obj_y:
+            cur_y += 0.01
+        elif cur_y > obj_y:
+            cur_y -= 0.01
+        
+        if abs(cur_x - obj_x) <= tol and abs(cur_y - obj_y) <= tol:
+            state = 'grasp'
+    
+    elif state == 'grasp':
+        # Do grasp here
+        dist = obj_1.geometry().distance(drone.link(0).geometry())
+        print(dist)
+    
+    drone.setConfig([cur_x, cur_y, cur_z, 2.0, 0.0, 0.0, 0, 0, 0, 0, 0])
+
+    time.sleep(0.01)    #loop is called ~100x times per second
+vis.kill()              #safe cleanup
+
+# vis.loop()
+
+#Mac OpenGL workaround: launch the vis loop and window in single-threaded mode
+#vis.loop()
+
+#for IPython, the screen is redrawn only after a cell is run, so you should just call
+#vis.show() in this cell, and then the inner loop
+
+########
 
 # visualization
 vis.createWindow()
 closeup_viewport = {'up': {'z': 0, 'y': 1, 'x': 0}, 'target': {'z': 0, 'y': 0, 'x': 0}, 'near': 0.1, 'position': {'z': 1.0, 'y': 0.5, 'x': 0.0}, 'far': 1000}
-# vis.setViewport(closeup_viewport)
-vis.add("world",world)
-#vis.add("COM",m.getCom(),color=(1,0,0,1),size=0.01)
-vis.show()
-vis.loop()
+vis.setViewport(closeup_viewport)
+# vis.show()
+# vis.loop()
