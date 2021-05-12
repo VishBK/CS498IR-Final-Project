@@ -124,7 +124,7 @@ gen_objs(world, objs)
 state = 'to_object'
 
 # set drone home
-home_coord = [2,2,1]
+home_coord = [2,2,2]
 drone.setConfig([home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0, 0, 0, 0])
 
 obj_1 = world.rigidObject(0)
@@ -133,7 +133,8 @@ obj_tform = obj_1.getTransform()
 
 obj_com = obj_1.getMass().getCom()
 
-obj_x, obj_y, obj_z = se3.apply(obj_tform, obj_com)
+obj_x, obj_y, obj_z = obj_tform[1]
+obj_cent_x, obj_cent_y, obj_cent_z = se3.apply(obj_tform, obj_com)
 cur_x, cur_y, cur_z = home_coord
 
 # set up window
@@ -154,23 +155,51 @@ vis.show()              #open the window
 t0 = time.time()
 while vis.shown():
     if state == 'to_object':
-        if cur_x < obj_x:
+        if cur_x < obj_cent_x:
             cur_x += 0.01
-        elif cur_x > obj_x:
+        elif cur_x > obj_cent_x:
             cur_x -= 0.01
-        if cur_y < obj_y:
+        if cur_y < obj_cent_y:
             cur_y += 0.01
-        elif cur_y > obj_y:
+        elif cur_y > obj_cent_y:
             cur_y -= 0.01
         
-        if abs(cur_x - obj_x) <= tol and abs(cur_y - obj_y) <= tol:
+        if abs(cur_x - obj_cent_x) <= tol and abs(cur_y - obj_cent_y) <= tol:
             state = 'grasp'
+            time.sleep(1)
     
     elif state == 'grasp':
+        if cur_z > 0.8:
+            cur_z -= 0.01
         # Do grasp here
-        dist = obj_1.geometry().distance(drone.link(0).geometry())
-        print(dist)
+        # dist = obj_1.geometry().distance(drone.link(0).geometry())
+        # print(dist)
+        else:
+            state = 'to_home'
+            time.sleep(1)
     
+    elif state == 'to_home':
+        if cur_x < home_coord[0]:
+            cur_x += 0.01
+            obj_x += 0.01
+        elif cur_x > home_coord[0]:
+            cur_x -= 0.01
+            obj_x -= 0.01
+        if cur_y < home_coord[1]:
+            cur_y += 0.01
+            obj_y += 0.01
+        elif cur_y > home_coord[1]:
+            cur_y -= 0.01
+            obj_y -= 0.01
+        if cur_z < home_coord[2]:
+            cur_z += 0.01
+            obj_z += 0.01
+        elif cur_z > home_coord[2]:
+            cur_z -= 0.01
+            obj_z -= 0.01
+    
+        obj_1.setTransform(obj_tform[0],[obj_x, obj_y, obj_z])
+
     drone.setConfig([cur_x, cur_y, cur_z, 2.0, 0.0, 0.0, 0, 0, 0, 0, 0])
 
     time.sleep(0.01)    #loop is called ~100x times per second
