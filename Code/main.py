@@ -46,4 +46,4 @@ closeup_viewport = {'up': {'z': 0, 'y': 1, 'x': 0}, 'target': {'z': 0, 'y': 0, '
 vis.setViewport(closeup_viewport)
 vis.add("world",world)
 #vis.add("COM",m.getCom(),color=(1,0,0,1),size=0.01)
-#vis.show()
+vis.show()
