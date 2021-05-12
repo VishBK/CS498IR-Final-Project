@@ -21,7 +21,7 @@
  
     <link name="armA">
         <inertial>
-            <origin xyz="-2.3E-05 -0.010364 -0.07336" rpy="0 0 0"/>
+            <origin xyz="-0.000648 -0.000166 0.084487" rpy="0 0 0"/>
             <mass value="0.25" />
             <inertia ixx="0.00457" ixy="1E-06" ixz="2E-06" iyy="0.004831" iyz="0.000448" izz="0.001409"/>
         </inertial>
@@ -34,8 +34,8 @@
     </link>
     <link name="armB">
         <inertial>
-            <origin xyz="2.3E-05 -0.010364 0.07336" rpy="0 0 0"/>
-            <mass value="0.25" />
+            <origin xyz="-0.000648 -0.000166 0.084487" rpy="0 0 0"/>
+            <mass value="0.25"/>
             <inertia ixx="0.00457" ixy="1E-06" ixz="2E-06" iyy="0.004831" iyz="0.000448" izz="0.001409"/>
         </inertial>
         <visual>
