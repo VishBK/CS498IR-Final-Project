@@ -91,8 +91,13 @@ def gen_objs(world, objs):
     for i,obj_key in enumerate(objs.keys()):
         obj = world.makeRigidObject(obj_key)
         obj.geometry().loadFile(objs[obj_key])
-        obj.geometry().scale(0.05)
-        #print(obj)
+        if i == 0:
+            obj.geometry().scale(0.05)
+        
+        obj_x = np.random.random()
+        obj_y = np.random.random()
+        obj_z = 0
+        obj.setTransform(obj.geometry().getCurrentTransform()[0], [obj_x, obj_y, obj_z])
 
         m = obj.getMass()
         m.estimate(obj.geometry(),mass=0.454,surfaceFraction=0.2)
