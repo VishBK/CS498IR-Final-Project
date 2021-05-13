@@ -8,18 +8,20 @@ from klampt import *
 from klampt import vis
 from klampt import WorldModel
 from klampt.math import vectorops,so3,se3
-from klampt.model.trajectory import Trajectory
+from klampt.model import trajectory
 from klampt.io import numpy_convert
 import numpy as np
 import math
 import random
 import sys
 import scipy
-sys.path.append('../common')
 import gripper
 import drone_gripper
+import planning
+import grasp
 from stable_faces import stable_faces,debug_stable_faces
 # vis.init('IPython')
+sys.path.append('../common')
 ycb_stable_faces = dict()
 
 def sample_object_pose_table(obj,stable_fs,bmin,bmax):
@@ -90,7 +92,7 @@ def gen_objs(world, objs):
     for i,obj_key in enumerate(objs.keys()):
         obj = world.makeRigidObject(obj_key)
         obj.geometry().loadFile(objs[obj_key])
-        obj.geometry().scale(0.2)
+        obj.geometry().scale(0.05)
         #print(obj)
 
         m = obj.getMass()
@@ -119,24 +121,89 @@ print('# links:', drone.numLinks())
 objs = {"object1": "../data/objects/cube.off"}
 gen_objs(world, objs)
 
+# find grasps
+
+#define some quantities of the gripper
+gripper_center = vectorops.madd(drone_gripper.robotiq_85.center,drone_gripper.robotiq_85.primary_axis,drone_gripper.robotiq_85.finger_length-0.005)
+gripper_closure_axis = drone_gripper.robotiq_85.secondary_axis
+
+temp_world = WorldModel()
+temp_world.readFile(drone_gripper.robotiq_85.klampt_model)
+#merge the gripper parts into a static geometry
+gripper_geom = Geometry3D()
+verts = []
+tris = []
+nverts = 0
+for i in range(temp_world.robot(0).numLinks()):
+    xform,(iverts,itris) = numpy_convert.to_numpy(temp_world.robot(0).link(i).geometry())
+    verts.append(np.dot(np.hstack((iverts,np.ones((len(iverts),1)))),xform.T)[:,:3])
+    tris.append(itris+nverts)
+    nverts += len(iverts)
+verts = np.vstack(verts)
+tris = np.vstack(tris)
+for t in tris:
+    assert all(v >= 0 and v < len(verts) for v in t)
+mesh = numpy_convert.from_numpy((verts,tris),'TriangleMesh')
+gripper_geom.setTriangleMesh(mesh)
+
+grasp1 = grasp.AntipodalGrasp([0.025,-0.15,0.015],[math.cos(math.radians(20)),math.sin(math.radians(20)),0])
+grasp1.finger_width = 0.05
+gripper_geom.setCurrentTransform(*grasp.match_grasp(gripper_center,gripper_closure_axis,grasp1))
+
+
 state = 'to_object'
 
 # set drone home
-home_coord = [2,2,2]
-print(drone.getConfig())
-#TODO figure out config numbers: [drone_x, drone_y, drone_z, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?]
-drone.setConfig([home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+home_coord = [2,2,1.5]
+#TODO figure out config numbers: [drone_x, drone_y, drone_z, yaw, pitch, roll, top_left, top_right, bottom_right, bottom_left, ?, ?, ?, ?, ?]
+start_config = [home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+drone.setConfig(start_config)
 
 obj_1 = world.rigidObject(0)
+# obj_1.setTransform(obj_1.getTransform()[0], [0.2, 0, 0])
 obj_tform = obj_1.getTransform()
-# world.rigidObject(0).setTransform(obj_tform[0], [0, 0, 0])
-
 obj_com = obj_1.getMass().getCom()
 
 obj_x, obj_y, obj_z = obj_tform[1]
 obj_cent_x, obj_cent_y, obj_cent_z = se3.apply(obj_tform, obj_com)
+obj_cent_z = obj_1.geometry().getBB()[1][2] + gripper_center[2]
+print('BB:',obj_1.geometry().getBB())
 cur_x, cur_y, cur_z = home_coord
 
+# motion planning
+target_config = [obj_cent_x, obj_cent_y, obj_cent_z-0.01, so3.rpy(obj_tform[0])[2], 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+print(target_config)
+path = planning.feasible_plan(world, drone, target_config)
+print(path)
+if path is None:
+    print('No path found')
+    exit()
+
+drone.setConfig(start_config)
+ptraj = trajectory.RobotTrajectory(drone,milestones=path)
+ptraj.times = [5*t / len(ptraj.times) * 1.0 for t in ptraj.times]
+traj = trajectory.path_to_trajectory(ptraj,timing='robot',smoothing=None)
+paths = [traj.milestones,traj.milestones[::-1]]
+
+grip = drone_gripper.robotiq_85
+
+drone.setConfig(target_config)
+gripper_tform = drone.link(0).geometry().getCurrentTransform()
+gripper_center = vectorops.madd(grip.center,grip.primary_axis,grip.finger_length-0.005)
+gripper_centerW = se3.apply(gripper_tform, gripper_center)
+gripper_axis = so3.apply(gripper_tform[0], grip.secondary_axis)
+finger_pt = vectorops.sub(vectorops.mul(gripper_axis, grip.maximum_span), gripper_centerW)
+dist = vectorops.norm(obj_1.geometry().rayCast(finger_pt,gripper_axis)[1])
+
+# qgrasp = grip.get_finger_config(target_config)
+# qgrasp[:3] = vectorops.madd(qgrasp[:3], gripper_axis, dist)
+# print('GRASP',qgrasp)
+# grip.set_finger_config(target_config,qgrasp)
+opening_width = grip.maximum_span - dist*2 - grip.finger_depth*2
+# print(opening_width)
+# print(grip.partway_open_config(grip.width_to_opening(0.01)))
+# grip.set_finger_config(target_config,grip.partway_open_config(grip.width_to_opening(opening_width)))
+drone.setConfig(start_config)
 # set up window
 
 #vis.createWindow()
@@ -147,77 +214,52 @@ vis.add("world", world)
 #show a Trajectory between q0 and qrand
 #vis.add("path_to_qrand",RobotTrajectory(r,[0,1],[q0,qrand]))
 
-#To control interaction / animation, launch the loop via one of the following:
 # drone flies to object
 tol = 0.01
+path_index = 0
+path_progress = 0
+nxt_config = start_config
+prev_config = []
 
 vis.show()              #open the window
 t0 = time.time()
 while vis.shown():
+    cur_path = paths[path_index]
     if state == 'to_object':
-        if cur_x < obj_cent_x:
-            cur_x += 0.01
-        elif cur_x > obj_cent_x:
-            cur_x -= 0.01
-        if cur_y < obj_cent_y:
-            cur_y += 0.01
-        elif cur_y > obj_cent_y:
-            cur_y -= 0.01
-        
-        if abs(cur_x - obj_cent_x) <= tol and abs(cur_y - obj_cent_y) <= tol:
+        nxt_config = cur_path[path_progress]
+        path_progress += 1
+
+        if path_progress >= len(cur_path):
+            path_progress = 0
             state = 'grasp'
-            time.sleep(1)
     
     elif state == 'grasp':
-        if cur_z > 0.8:
-            cur_z -= 0.01
-        # Do grasp here
-        # dist = obj_1.geometry().distance(drone.link(0).geometry())
-        # print(dist)
-        else:
-            state = 'to_home'
-            time.sleep(1)
+        nxt_config = target_config[:7]+grip.partway_open_config(grip.width_to_opening(opening_width))        
+        path_index += 1
+        state = 'to_home'
+        time.sleep(1)
     
     elif state == 'to_home':
-        if cur_x < home_coord[0]:
-            cur_x += 0.01
-            obj_x += 0.01
-        elif cur_x > home_coord[0]:
-            cur_x -= 0.01
-            obj_x -= 0.01
-        if cur_y < home_coord[1]:
-            cur_y += 0.01
-            obj_y += 0.01
-        elif cur_y > home_coord[1]:
-            cur_y -= 0.01
-            obj_y -= 0.01
-        if cur_z < home_coord[2]:
-            cur_z += 0.01
-            obj_z += 0.01
-        elif cur_z > home_coord[2]:
-            cur_z -= 0.01
-            obj_z -= 0.01
+        prev_config = nxt_config
+        nxt_config = cur_path[path_progress]
+        nxt_config = nxt_config[:7]+grip.partway_open_config(grip.width_to_opening(opening_width))
+
+        cur_obj_t = obj_1.geometry().getCurrentTransform()
+        obj_trans = vectorops.add(cur_obj_t[1],vectorops.sub(nxt_config[:3], prev_config[:3]))
+        obj_rpy = so3.rpy(cur_obj_t[0])
+        obj_rot = so3.from_rpy(vectorops.add(obj_rpy, [vectorops.sub(nxt_config, prev_config)[5], vectorops.sub(nxt_config, prev_config)[4], vectorops.sub(nxt_config, prev_config)[3]]))
+        obj_1.setTransform(cur_obj_t[0],obj_trans)
+
+        path_progress += 1
+        if path_progress >= len(cur_path):
+            path_progress = 0
+            path_index += 1
+            state = 'done'
     
-        obj_1.setTransform(obj_tform[0],[obj_x, obj_y, obj_z])
+    drone.setConfig(nxt_config)
+    if path_index >= len(paths):
+        break
 
-    drone.setConfig([cur_x, cur_y, cur_z, 2.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-
-    time.sleep(0.01)    #loop is called ~100x times per second
+    time.sleep(0.02)    #loop is called ~100x times per second
+vis.loop()
 vis.kill()              #safe cleanup
-
-# vis.loop()
-
-#Mac OpenGL workaround: launch the vis loop and window in single-threaded mode
-#vis.loop()
-
-#for IPython, the screen is redrawn only after a cell is run, so you should just call
-#vis.show() in this cell, and then the inner loop
-
-########
-
-# visualization
-vis.createWindow()
-closeup_viewport = {'up': {'z': 0, 'y': 1, 'x': 0}, 'target': {'z': 0, 'y': 0, 'x': 0}, 'near': 0.1, 'position': {'z': 1.0, 'y': 0.5, 'x': 0.0}, 'far': 1000}
-vis.setViewport(closeup_viewport)
-# vis.show()
-# vis.loop()
