@@ -47,7 +47,6 @@ def sample_object_pose_table(obj,stable_fs,bmin,bmax):
     Rx = so3.rotation((1,0,0),random.uniform(0,math.pi*2))
     Rxz = so3.rotation((0,1,0),-math.pi*0.5)
     R = so3.mul(Rxz,so3.mul(Rx,so3.inv(Rnormal)))
-    #R*com + t = [x,y,_]
     t = vectorops.sub([x,y,z],so3.apply(R,obj.getMass().getCom()))
     t[2] = z
     obj.setTransform(R,t)
@@ -121,35 +120,9 @@ print('# links:', drone.numLinks())
 objs = {"object1": "../data/objects/cube.off"}
 gen_objs(world, objs)
 
-# find grasps
-
 #define some quantities of the gripper
 gripper_center = vectorops.madd(drone_gripper.robotiq_85.center,drone_gripper.robotiq_85.primary_axis,drone_gripper.robotiq_85.finger_length-0.005)
 gripper_closure_axis = drone_gripper.robotiq_85.secondary_axis
-
-temp_world = WorldModel()
-temp_world.readFile(drone_gripper.robotiq_85.klampt_model)
-#merge the gripper parts into a static geometry
-gripper_geom = Geometry3D()
-verts = []
-tris = []
-nverts = 0
-for i in range(temp_world.robot(0).numLinks()):
-    xform,(iverts,itris) = numpy_convert.to_numpy(temp_world.robot(0).link(i).geometry())
-    verts.append(np.dot(np.hstack((iverts,np.ones((len(iverts),1)))),xform.T)[:,:3])
-    tris.append(itris+nverts)
-    nverts += len(iverts)
-verts = np.vstack(verts)
-tris = np.vstack(tris)
-for t in tris:
-    assert all(v >= 0 and v < len(verts) for v in t)
-mesh = numpy_convert.from_numpy((verts,tris),'TriangleMesh')
-gripper_geom.setTriangleMesh(mesh)
-
-grasp1 = grasp.AntipodalGrasp([0.025,-0.15,0.015],[math.cos(math.radians(20)),math.sin(math.radians(20)),0])
-grasp1.finger_width = 0.05
-gripper_geom.setCurrentTransform(*grasp.match_grasp(gripper_center,gripper_closure_axis,grasp1))
-
 
 state = 'to_object'
 
@@ -185,9 +158,10 @@ ptraj.times = [5*t / len(ptraj.times) * 1.0 for t in ptraj.times]
 traj = trajectory.path_to_trajectory(ptraj,timing='robot',smoothing=None)
 paths = [traj.milestones,traj.milestones[::-1]]
 
-grip = drone_gripper.robotiq_85
-
+# find grasps
 drone.setConfig(target_config)
+
+grip = drone_gripper.robotiq_85
 gripper_tform = drone.link(0).geometry().getCurrentTransform()
 gripper_center = vectorops.madd(grip.center,grip.primary_axis,grip.finger_length-0.005)
 gripper_centerW = se3.apply(gripper_tform, gripper_center)
@@ -195,24 +169,10 @@ gripper_axis = so3.apply(gripper_tform[0], grip.secondary_axis)
 finger_pt = vectorops.sub(vectorops.mul(gripper_axis, grip.maximum_span), gripper_centerW)
 dist = vectorops.norm(obj_1.geometry().rayCast(finger_pt,gripper_axis)[1])
 
-# qgrasp = grip.get_finger_config(target_config)
-# qgrasp[:3] = vectorops.madd(qgrasp[:3], gripper_axis, dist)
-# print('GRASP',qgrasp)
-# grip.set_finger_config(target_config,qgrasp)
 opening_width = grip.maximum_span - dist*2 - grip.finger_depth*2
-# print(opening_width)
-# print(grip.partway_open_config(grip.width_to_opening(0.01)))
-# grip.set_finger_config(target_config,grip.partway_open_config(grip.width_to_opening(opening_width)))
 drone.setConfig(start_config)
-# set up window
 
-#vis.createWindow()
-#add a "world" item to the scene manager
 vis.add("world", world)
-#show qrand as a ghost configuration in transparent red
-#vis.add("qrand",qrand,color=(1,0,0,0.5))
-#show a Trajectory between q0 and qrand
-#vis.add("path_to_qrand",RobotTrajectory(r,[0,1],[q0,qrand]))
 
 # drone flies to object
 tol = 0.01
