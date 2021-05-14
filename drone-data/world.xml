@@ -2,8 +2,8 @@
 <world>
     <robot name="airobot" file="airobot.urdf"/>
     <terrain name="floor" file="../data/terrains/plane.env"/>
-    <terrain name="tree" file="../data/terrains/oak_tree.obj" translation="0.7 -0.2 0.01" scale="0.002"/>
-    <terrain name="tree" file="../data/terrains/oak_tree.obj" rotateRPY="0 0 1.5708" translation="-0.7 -0.2 0.01" scale="0.0015"/>
-    <terrain name="tree" file="../data/terrains/oak_tree.obj" rotateRPY="0 0 1" translation="-0.3 0.4 0.01" scale="0.001"/>
+    <terrain name="tree" file="../data/terrains/oak_tree.obj" translation="0.75 -0.25 0.01" scale="0.002"/>
+    <terrain name="tree" file="../data/terrains/oak_tree.obj" rotateRPY="0 0 1.5708" translation="-0.75 -0.25 0.01" scale="0.0015"/>
+    <terrain name="tree" file="../data/terrains/oak_tree.obj" rotateRPY="0 0 1" translation="-0.35 0.45 0.01" scale="0.001"/>
 </world>
 

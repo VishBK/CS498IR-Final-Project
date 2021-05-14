@@ -94,8 +94,8 @@ def gen_objs(world, objs):
         if i == 0:
             obj.geometry().scale(0.05)
         
-        obj_x = np.random.random()
-        obj_y = np.random.random()
+        obj_x = random.random()
+        obj_y = random.random()
         obj_z = 0
         obj.setTransform(obj.geometry().getCurrentTransform()[0], [obj_x, obj_y, obj_z])
 
@@ -122,7 +122,7 @@ if not res:
 # generate a random world
 drone = world.robot(0)
 print('# links:', drone.numLinks())
-objs = {"object1": "../data/objects/cube.off"}
+objs = {"object1": "../data/objects/cube.off", "object2:": "../data/objects/ycb-select/003_cracker_box/textured.obj"}
 gen_objs(world, objs)
 
 #define some quantities of the gripper
@@ -138,49 +138,63 @@ start_config = [home_coord[0], home_coord[1], home_coord[2], 2.0, 0.0, 0.0, 0, 0
 drone.setConfig(start_config)
 
 obj_1 = world.rigidObject(0)
-# obj_1.setTransform(obj_1.getTransform()[0], [0.2, 0, 0])
-obj_tform = obj_1.getTransform()
-obj_com = obj_1.getMass().getCom()
-
-obj_x, obj_y, obj_z = obj_tform[1]
-obj_cent_x, obj_cent_y, obj_cent_z = se3.apply(obj_tform, obj_com)
-obj_cent_z = obj_1.geometry().getBB()[1][2] + gripper_center[2]
-print('BB:',obj_1.geometry().getBB())
-cur_x, cur_y, cur_z = home_coord
-
-# motion planning
-target_config = [obj_cent_x, obj_cent_y, obj_cent_z-0.01, so3.rpy(obj_tform[0])[2], 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-print(target_config)
-path = planning.feasible_plan(world, drone, target_config)
-print(path)
-if path is None:
-    print('No path found')
-    exit()
-
-drone.setConfig(start_config)
-ptraj = trajectory.RobotTrajectory(drone,milestones=path)
-ptraj.times = [5*t / len(ptraj.times) * 1.0 for t in ptraj.times]
-traj = trajectory.path_to_trajectory(ptraj,timing='robot',smoothing=None)
-paths = [traj.milestones,traj.milestones[::-1]]
-
-# find grasps
-drone.setConfig(target_config)
+obj_2 = world.rigidObject(1)
+objects = [obj_1, obj_2]
+num_of_objs = len(objects)
 
 grip = drone_gripper.robotiq_85
-gripper_tform = drone.link(0).geometry().getCurrentTransform()
-gripper_center = vectorops.madd(grip.center,grip.primary_axis,grip.finger_length-0.005)
-gripper_centerW = se3.apply(gripper_tform, gripper_center)
-gripper_axis = so3.apply(gripper_tform[0], grip.secondary_axis)
-finger_pt = vectorops.sub(vectorops.mul(gripper_axis, grip.maximum_span), gripper_centerW)
-dist = vectorops.norm(obj_1.geometry().rayCast(finger_pt,gripper_axis)[1])
 
-opening_width = grip.maximum_span - dist*2 - grip.finger_depth*2
-drone.setConfig(start_config)
+def getPath(o, robot, world, qstart):
+    obj_tform = o.getTransform()
+    obj_com = o.getMass().getCom()
+
+    obj_x, obj_y, obj_z = obj_tform[1]
+    obj_cent_x, obj_cent_y, obj_cent_z = se3.apply(obj_tform, obj_com)
+    obj_cent_z = o.geometry().getBB()[1][2] + gripper_center[2]
+    cur_x, cur_y, cur_z = home_coord
+
+    # motion planning
+    target_config = [obj_cent_x, obj_cent_y, obj_cent_z-0.01, so3.rpy(obj_tform[0])[2], 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    path = planning.feasible_plan(world, robot, target_config)
+    if path is None:
+        print('No path found')
+        exit()
+
+    robot.setConfig(qstart)
+    ptraj = trajectory.RobotTrajectory(robot,milestones=path)
+    ptraj.times = [5*t / len(ptraj.times) * 1.0 for t in ptraj.times]
+    traj = trajectory.path_to_trajectory(ptraj,timing='robot',smoothing=None)
+    paths = [traj.milestones,traj.milestones[::-1]]
+    robot.setConfig(target_config)
+    return (paths, target_config)
+
+def getGrasp(o, robot, qstart):
+    # find grasps
+    gripper_tform = drone.link(0).geometry().getCurrentTransform()
+    gripper_center = vectorops.madd(grip.center,grip.primary_axis,grip.finger_length-0.005)
+    gripper_centerW = se3.apply(gripper_tform, gripper_center)
+    gripper_axis = so3.apply(gripper_tform[0], grip.secondary_axis)
+    finger_pt = vectorops.sub(vectorops.mul(gripper_axis, grip.maximum_span), gripper_centerW)
+    dist = vectorops.norm(o.geometry().rayCast(finger_pt,gripper_axis)[1])
+
+    opening_width = grip.maximum_span - dist*2 - grip.finger_depth*2
+    robot.setConfig(qstart)
+    return opening_width
+
+paths = []
+target_configs = []
+opening_widths = []
+for o in objects:
+    p, cur_tar = getPath(o, drone, world, start_config)
+    paths.extend(p)
+    target_configs.append(cur_tar)
+    opening_widths.append(getGrasp(o, drone, start_config))
 
 vis.add("world", world)
 
-# drone flies to object
+# drone flies to objects
 tol = 0.01
+obj_idx = 0
 path_index = 0
 path_progress = 0
 nxt_config = start_config
@@ -199,7 +213,7 @@ while vis.shown():
             state = 'grasp'
     
     elif state == 'grasp':
-        nxt_config = target_config[:7]+grip.partway_open_config(grip.width_to_opening(opening_width))        
+        nxt_config = target_configs[obj_idx][:7]+grip.partway_open_config(grip.width_to_opening(opening_widths[obj_idx]))        
         path_index += 1
         state = 'to_home'
         time.sleep(1)
@@ -207,19 +221,26 @@ while vis.shown():
     elif state == 'to_home':
         prev_config = nxt_config
         nxt_config = cur_path[path_progress]
-        nxt_config = nxt_config[:7]+grip.partway_open_config(grip.width_to_opening(opening_width))
+        nxt_config = nxt_config[:7]+grip.partway_open_config(grip.width_to_opening(opening_widths[obj_idx]))
 
-        cur_obj_t = obj_1.geometry().getCurrentTransform()
+        cur_obj_t = objects[obj_idx].geometry().getCurrentTransform()
         obj_trans = vectorops.add(cur_obj_t[1],vectorops.sub(nxt_config[:3], prev_config[:3]))
         obj_rpy = so3.rpy(cur_obj_t[0])
         obj_rot = so3.from_rpy(vectorops.add(obj_rpy, [vectorops.sub(nxt_config, prev_config)[5], vectorops.sub(nxt_config, prev_config)[4], vectorops.sub(nxt_config, prev_config)[3]]))
-        obj_1.setTransform(cur_obj_t[0],obj_trans)
+        objects[obj_idx].setTransform(cur_obj_t[0],obj_trans)
 
         path_progress += 1
         if path_progress >= len(cur_path):
             path_progress = 0
             path_index += 1
-            state = 'done'
+            nxt_config = start_config
+
+            cur_obj_t = objects[obj_idx].geometry().getCurrentTransform()
+            obj_trans = [cur_obj_t[1][0],cur_obj_t[1][1],0]
+            objects[obj_idx].setTransform(cur_obj_t[0],obj_trans)
+            obj_idx += 1
+
+            state = 'to_object'
     
     drone.setConfig(nxt_config)
     if path_index >= len(paths):
